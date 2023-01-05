@@ -32,12 +32,3 @@ def parse_item(buffer):
         content,
         topics
     )
-
-
-def count_word_appearances(words: List[str]) -> Dict[str, int]:
-    word_count_dict = {}
-    for word in words:
-        if word not in word_count_dict:
-            word_count_dict[word] = 0
-        word_count_dict[word] = word_count_dict[word] + 1
-    return word_count_dict

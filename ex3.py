@@ -10,8 +10,8 @@ from itertools import chain
 INPUT_FILE = "develop.txt"
 CLUSTERS_NUMBER = 9
 SMALLEST_ITEM_TO_CALC = -10
-SMOOTH_LAMBDA = 0.5
-SMOOTH_EPSILON = 0.002
+SMOOTH_LAMBDA = 0.01
+SMOOTH_EPSILON = 0.001
 
 USE_WORD_IF_APPEAR_MORE_THAN = 3
 
@@ -38,9 +38,12 @@ def main():
     maximization()  # starting by maximizing because we already have an assignments
     expectation()
     while True:  # em.calculate_minus_log_likelihood() < STOP_THRESHOLD:
-        print(f'{em.calculate_minus_log_likelihood()}, {em.calculate_perplexity()}')
+        print(f'after expectation: {em.calculate_minus_log_likelihood()}, {em.calculate_perplexity()}')
         maximization()
+        expectation.update_z_vectors()
+        print(f'after maximization: {em.calculate_minus_log_likelihood()}, {em.calculate_perplexity()}')
         expectation()
+        expectation.update_z_vectors()
 
 
 if __name__ == "__main__":

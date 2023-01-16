@@ -15,6 +15,7 @@ class ExpectationMaximization:
                  smooth_lambda: float,
                  smooth_epsilon: float):
         self.docs = docs
+        self.docs_word_appearances = [word_appearances(doc) for doc in docs]
         self.clusters_number = clusters_number
         self.docs_count = len(docs)
         print(f'number of docs: {self.docs_count}')
@@ -39,7 +40,6 @@ class ExpectationMaximization:
         # Whenever implemented, weights should rely on output of maximization step
         for cluster in range(self.clusters_number):
             for word in self.words:
-                # Even distribution in the beginning TODO: sure? I think it should be based on the first clusters
                 self.word_cluster_probability[word] = np.zeros(self.clusters_number)
 
     def _hot_dot(self, index):
@@ -54,7 +54,7 @@ class ExpectationMaximization:
         return np.exp(self.calculate_minus_log_likelihood() / self.words_count)
 
     def calculate_minus_log_likelihood(self):
-        return - sum(np.max(vector) + np.sum(np.exp(vector - np.max(vector))) for vector in self.z_vectors)
+        return - sum(np.max(vector) + math.log(np.sum(np.exp(vector - np.max(vector)))) for vector in self.z_vectors)
 
 
 class Expectation:
@@ -62,30 +62,35 @@ class Expectation:
     def __init__(self, em: ExpectationMaximization):
         self.em = em
 
-    def _ln_prob_document_to_be_of_given_cluster(self, document: List[str], cluster_index: int) -> float:
+    def _ln_prob_document_to_be_of_given_cluster(self, doc_words, cluster_index: int) -> float:
         ln_prob_sum = math.log(self.em.clusters_probabilities[cluster_index])
 
-        for word, count in word_appearances(document).items():
+        for word, count in doc_words.items():
             prob_word = self.em.word_cluster_probability[word][
                 cluster_index]
             ln_prob_sum += math.log(prob_word) * count
 
         return ln_prob_sum
 
-    def z_vector(self, document: List[str]) -> np.ndarray:
+    def z_vector(self, doc_words) -> np.ndarray:
         """For each document, a vector of probabilities will be returned, \
         Stating the probabilities for this document to belong to any of the cluster"""
 
         z_vector = np.fromiter(
-            (self._ln_prob_document_to_be_of_given_cluster(document, index)
+            (self._ln_prob_document_to_be_of_given_cluster(doc_words, index)
              for index in range(self.em.clusters_number)), dtype=float
         )
         z_vector[z_vector - np.max(z_vector) < self.em.smallest_item_softmax_calc] = float("-inf")
         return z_vector
 
+    def update_z_vectors(self):
+        self.em.z_vectors = [self.z_vector(words) for words in self.em.docs_words]
+
     def __call__(self):
-        self.em.z_vectors = [self.z_vector(doc) for doc in self.em.docs]
+        self.update_z_vectors()
         self.em.assignments = np.column_stack([softmax(vector - np.max(vector)) for vector in self.em.z_vectors])
+        print(self.em.assignments)
+        print(self.em.assignments.shape)
 
 
 class Maximization:
@@ -98,13 +103,23 @@ class Maximization:
         # Update cluster weights
         # Update word cluster probability
 
-        self.em.clusters_probabilities = (self.em.assignments.sum(axis=0) + self.em.smooth_epsilon) / (
-                1 + self.em.clusters_number * self.em.smooth_epsilon)
+        self.em.clusters_probabilities = self.em.assignments.sum(axis=1)
+        self.em.clusters_probabilities = self.em.clusters_probabilities / len(self.em.docs)
+        #print(self.em.clusters_probabilities)
+        self.em.clusters_probabilities = np.maximum(self.em.clusters_probabilities, self.em.smooth_epsilon)
+        self.em.clusters_probabilities = self.em.clusters_probabilities / self.em.clusters_probabilities.sum()
 
-        for word in self.em.word_cluster_probability.keys():
+        #print(self.em.clusters_probabilities)
+        #print(self.em.clusters_probabilities.shape)
+
+        for word in self.em.words:
             for i in range(self.em.clusters_number):
-                self.em.word_cluster_probability[word][i] = (sum(
+                word_in_i = sum(
                     self.em.assignments[i][j] * self.em.docs_words[i].get(word, 0) for j in
-                    range(len(self.em.docs))) + self.em.smooth_lambda) / (sum(
-                    self.em.assignments[i][j] * len(self.em.docs[i]) for j in
-                    range(len(self.em.docs))) + self.em.smooth_lambda * len(self.em.words))
+                    range(len(self.em.docs)))
+
+                words_in_i = sum(self.em.assignments[i][j] * len(self.em.docs[i]) for j in
+                                 range(len(self.em.docs)))
+
+                self.em.word_cluster_probability[word][i] = (word_in_i + self.em.smooth_lambda) / (
+                        words_in_i + self.em.smooth_lambda * len(self.em.words))

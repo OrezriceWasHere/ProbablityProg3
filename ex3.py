@@ -4,13 +4,15 @@ from input_parser import build_input_cache
 from expectation_maximization import ExpectationMaximization, Expectation, Maximization
 
 from word_counter import word_appearances
-
 from itertools import chain
+
+import numpy as np
+
 
 INPUT_FILE = "develop.txt"
 CLUSTERS_NUMBER = 9
 SMALLEST_ITEM_TO_CALC = -10
-SMOOTH_LAMBDA = 0.01
+SMOOTH_LAMBDA = 1
 SMOOTH_EPSILON = 0.001
 
 USE_WORD_IF_APPEAR_MORE_THAN = 3
@@ -19,6 +21,8 @@ STOP_THRESHOLD = 0.5
 
 
 def main():
+    np.set_printoptions(edgeitems=10)
+
     items = build_input_cache(INPUT_FILE)
 
     all_words = list(chain.from_iterable(item.words for item in items))

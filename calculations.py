@@ -19,4 +19,5 @@ def softmax(values: np.ndarray) -> np.ndarray:
     """Compute softmax values for each sets of scores in x."""
 
     e_x = np.exp(values - np.max(values))
+    print(e_x / e_x.sum())
     return e_x / e_x.sum()

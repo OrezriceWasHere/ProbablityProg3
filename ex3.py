@@ -98,10 +98,10 @@ def main():
 
     x_values = list(range(len(likelihood_history)))
     plt.plot(x_values, likelihood_history)
-    #plt.show()
+    plt.show()
 
     plt.plot(x_values, perplexity_history)
-    #plt.show()
+    plt.show()
 
     print_confusion_matrix(em.assignments, items)
 

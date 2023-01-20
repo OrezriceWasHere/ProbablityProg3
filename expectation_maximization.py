@@ -1,3 +1,5 @@
+# Jonathan Shaki, Or Shachar 204920367, 209493709
+
 import math
 import numpy as np
 from calculations import softmax
@@ -42,15 +44,12 @@ class ExpectationMaximization:
                 self.word_cluster_probability[word] = np.zeros(self.clusters_number)
 
     def _hot_dot(self, index):
-        return np.ones(self.clusters_number) / self.clusters_number
-
         v = np.zeros(self.clusters_number)
         v[index] = 1
         return v
 
     def _init_clusters_probabilities(self):
         self.assignments = np.column_stack([self._hot_dot(i % self.clusters_number) for i in range(len(self.docs))])
-        #print(self.assignments)
 
     def calculate_perplexity(self):
         return np.exp(self.calculate_minus_log_likelihood() / self.words_count)
@@ -81,16 +80,7 @@ class Expectation:
             (self._ln_prob_document_to_be_of_given_cluster(doc_words, index)
              for index in range(self.em.clusters_number)), dtype=float
         )
-
-        print(z_vector)
-
         z_vector[z_vector - np.max(z_vector) < self.em.smallest_item_softmax_calc] = float("-inf")
-
-        print(z_vector)
-
-        print(softmax(z_vector))
-
-        input()
 
         return z_vector
 
@@ -103,10 +93,7 @@ class Expectation:
 
     def __call__(self):
         self.update_z_vectors()
-        # self.em.assignments = np.column_stack([softmax(vector - np.max(vector)) for vector in self.em.z_vectors])
         self.em.assignments = np.column_stack([softmax(vector) for vector in self.em.z_vectors])
-        #print(self.em.assignments)
-        #print(self.em.assignments.shape)
 
 
 class Maximization:
@@ -121,23 +108,17 @@ class Maximization:
 
         self.em.clusters_probabilities = self.em.assignments.sum(axis=1)
         self.em.clusters_probabilities = self.em.clusters_probabilities / len(self.em.docs)
-        # print(self.em.clusters_probabilities)
         self.em.clusters_probabilities = np.maximum(self.em.clusters_probabilities, self.em.smooth_epsilon)
         self.em.clusters_probabilities = self.em.clusters_probabilities / self.em.clusters_probabilities.sum()
-
-        #print(self.em.clusters_probabilities)
-        # print(self.em.clusters_probabilities.shape)
 
         for word in self.em.words:
             for i in range(self.em.clusters_number):
                 word_in_i = sum(
-                    self.em.assignments[i][j] * self.em.docs_words[i].get(word, 0) for j in
+                    self.em.assignments[i][j] * self.em.docs_words[j].get(word, 0) for j in
                     range(len(self.em.docs)))
 
-                words_in_i = sum(self.em.assignments[i][j] * len(self.em.docs[i]) for j in
+                words_in_i = sum(self.em.assignments[i][j] * len(self.em.docs[j]) for j in
                                  range(len(self.em.docs)))
 
                 self.em.word_cluster_probability[word][i] = (word_in_i + self.em.smooth_lambda) / (
                         words_in_i + self.em.smooth_lambda * len(self.em.words))
-
-        #print(sum(self.em.word_cluster_probability[word][5] for word in self.em.words))
